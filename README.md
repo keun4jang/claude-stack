@@ -74,15 +74,70 @@ claude plugin install ui-ux-pro-max@rmsdu-stack
 claude plugin install superpowers@rmsdu-stack
 ```
 
-## 클라우드 / 모바일에서 쓰려면
+## 어디서든 자동으로 쓰기
 
-PC를 켜두고 폰에서 쓸 거라면 이 저장소가 필요 없습니다 — Remote Control이 폰을 PC 세션의 창으로 만들어 주므로 5개가 그대로 작동합니다:
+먼저 알아야 할 사실: **모바일 앱은 자체 설정을 갖지 않습니다.** 공식 문서 원문 —
 
-```powershell
-claude remote-control    # 스페이스바 = QR 코드
+> "Mobile is a **thin client** into those same cloud sessions or into a local
+> session via Remote Control, and can send tasks to Desktop with Dispatch."
+
+즉 폰에 스킬을 "설치"하는 건 불가능합니다. 폰은 항상 **다른 곳에서 도는 세션의 창**입니다.
+그래서 자동화 지점은 정확히 두 곳뿐입니다.
+
+| 어디서 | 자동? | 어떻게 |
+|---|---|---|
+| 이 PC | ✅ | user scope |
+| 다른 PC | 최초 1회 명령 2개 | 위 install 섹션 |
+| 폰 — PC 켜둠 | ✅ **완전 자동** | `remoteControlAtStartup: true` |
+| 폰 / 클라우드 — **PC 꺼짐** | ✅ 저장소당 1회 | `.claude/settings.json` 커밋 |
+
+### 폰 — PC 켜둠 (완전 자동)
+
+`~/.claude/settings.json`에 이 세 줄이면 끝. 모든 세션이 자동으로 Remote Control에 연결되고,
+폰 Claude 앱 → Code 탭에 뜹니다. 명령을 칠 필요가 없습니다.
+
+```json
+{
+  "remoteControlAtStartup": true,
+  "agentPushNotifEnabled": true,
+  "inputNeededNotifEnabled": true
+}
 ```
 
-**PC 없이** 클라우드 세션(claude.ai/code, 모바일 Code 탭)에서 쓰려면 `examples/project-claude-settings.json`을 각 프로젝트 저장소의 `.claude/settings.json`으로 커밋하세요. 클라우드 세션은 저장소만 읽고 `~/.claude`는 절대 읽지 않습니다. 선언된 플러그인은 세션 시작 시 자동 설치됩니다.
+이 경로에선 5개가 전부 그대로 작동합니다 — 실행 주체가 PC이기 때문입니다.
+Pro/Max/Team/Enterprise 필요, `claude auth login`으로 로그인돼 있어야 합니다.
+
+> ⚠️ 켜져 있는 동안 **세션 전문(메시지·응답·도구 활동)이 Anthropic 서버에 저장**됩니다.
+> 실행과 파일 접근은 로컬에 남지만 대화 기록은 아닙니다. 끄려면 `false`.
+
+### 폰 / 클라우드 — PC 꺼짐 (저장소당 1회)
+
+클라우드 세션은 **저장소만** 읽습니다. 공식 carry-over 표:
+
+| | 클라우드에서? |
+|---|---|
+| `.claude/settings.json`에 선언된 플러그인 | **Yes** — "Installed at session start" |
+| user 설정에만 있는 플러그인 | **No** |
+| `~/.claude/skills/` | **No** — "Commit them to the repo's `.claude/` instead" |
+
+> "To make your own configuration available in cloud sessions, **commit it to the repo**."
+
+계정 단위 사용자 설정은 존재하지 않습니다. 저장소마다 한 번씩 넣으세요:
+
+```powershell
+.\add-to-repo.ps1 C:\Projects\my-app
+# 그다음 git add .claude/settings.json && git commit && git push
+```
+
+기존 `.claude/settings.json`이 있으면 **덮어쓰지 않고 병합**합니다.
+토큰을 아끼려면 필요한 것만:
+
+```powershell
+.\add-to-repo.ps1 . -Only ui-ux-pro-max,superpowers
+```
+
+커밋 후에는 그 저장소의 클라우드 세션이 시작 시 자동 설치합니다 — PC 불필요.
+로컬에선 폴더 신뢰 시 설치 프롬프트가 한 번 뜹니다.
 
 ## 여기에 절대 넣지 말 것
 
