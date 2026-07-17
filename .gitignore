@@ -34,3 +34,6 @@ dotfiles/.last-cleanup
 # The skills CLI's real content. Re-fetched from GitHub by bootstrap; the
 # junctions in ~/.claude/skills point at absolute paths and never travel.
 .agents/
+
+# Build output of make-claude-ai-zips.ps1 (~900 KB of derived ZIPs).
+claude-ai-upload/
