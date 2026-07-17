@@ -22,7 +22,7 @@ param(
     [ValidateSet('marketplace', 'classic')]
     [string]$Route = 'marketplace',
 
-    [string]$MarketplaceRepo = 'rmsdu/claude-stack'
+    [string]$MarketplaceRepo = 'keun4jang/claude-stack'
 )
 
 $ErrorActionPreference = 'Stop'

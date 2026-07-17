@@ -5,7 +5,7 @@
     "rmsdu-stack": {
       "source": {
         "source": "github",
-        "repo": "rmsdu/claude-stack"
+        "repo": "keun4jang/claude-stack"
       },
       "autoUpdate": true
     }
