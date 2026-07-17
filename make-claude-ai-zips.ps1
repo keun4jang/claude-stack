@@ -47,6 +47,10 @@ function New-SpecZip {
         foreach ($f in (Get-ChildItem -LiteralPath $SourceDir -Recurse -File)) {
             $rel  = $f.FullName.Substring($SourceDir.Length).TrimStart($SEP)
             $name = "$RootName/" + ($rel.Replace($SEP, '/'))
+            # evals/ holds test fixtures for `claude plugin eval`. Nothing reads
+            # them at runtime, and the uploader caps a ZIP at 200 files -- with
+            # them the marketing bundle is 239 and is rejected, without them 194.
+            if ($name -match '(^|/)evals/') { continue }
             $e  = $zip.CreateEntry($name, [System.IO.Compression.CompressionLevel]::Optimal)
             $es = $e.Open()
             $b  = [System.IO.File]::ReadAllBytes($f.FullName)
@@ -56,13 +60,20 @@ function New-SpecZip {
     } finally { $zip.Dispose(); $fs.Dispose() }
 }
 
+$MAX_FILES = 200   # enforced by the uploader: "Zip contains too many files (maximum 200)"
+
 function Test-SpecZip {
     param([string]$ZipPath)
     $a = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
     try {
         $backslashes = @($a.Entries | Where-Object { $_.FullName.Contains($SEP) }).Count
         $hasSkillMd  = @($a.Entries | Where-Object { $_.FullName -match '(^|/)SKILL\.md$' }).Count
-        [PSCustomObject]@{ Backslashes = $backslashes; SkillMdCount = $hasSkillMd }
+        [PSCustomObject]@{
+            Backslashes  = $backslashes
+            SkillMdCount = $hasSkillMd
+            FileCount    = $a.Entries.Count
+            OverLimit    = ($a.Entries.Count -gt $MAX_FILES)
+        }
     } finally { $a.Dispose() }
 }
 
@@ -126,8 +137,18 @@ $($index -join "`n")
 
     $r = Test-SpecZip $zipPath
     Write-Host "==> marketing.zip  ($([math]::Round((Get-Item $zipPath).Length/1KB,1)) KB, $($skills.Count) skills bundled)" -ForegroundColor Cyan
-    Write-Host "    backslash entries: $($r.Backslashes)  (must be 0)   SKILL.md files: $($r.SkillMdCount)" -ForegroundColor DarkGray
-    Write-Host "`nUpload this ONE file at claude.ai > Settings > Features > Skills." -ForegroundColor Green
+    Write-Host "    files: $($r.FileCount) / $MAX_FILES    backslashes: $($r.Backslashes) (must be 0)    SKILL.md: $($r.SkillMdCount)" -ForegroundColor DarkGray
+    if ($r.OverLimit) {
+        Write-Host "`n!! $($r.FileCount) files exceeds the $MAX_FILES-file upload cap - this WILL be rejected." -ForegroundColor Red
+        Write-Host "   Upstream must have added skills or reference files. Either drop some skills" -ForegroundColor Red
+        Write-Host "   from the bundle, or use the individual ZIPs instead (no -Bundled)." -ForegroundColor Red
+        exit 1
+    }
+    $headroom = $MAX_FILES - $r.FileCount
+    if ($headroom -lt 20) {
+        Write-Host "    note: only $headroom files of headroom left under the cap." -ForegroundColor Yellow
+    }
+    Write-Host "`nUpload this ONE file at claude.ai > Customize > Skills." -ForegroundColor Green
 
 } else {
     $indiv = Join-Path $OutDir 'individual'
@@ -137,12 +158,15 @@ $($index -join "`n")
         $zp = Join-Path $indiv "$($s.Name).zip"
         New-SpecZip -SourceDir $s.FullName -ZipPath $zp -RootName $s.Name
         $r = Test-SpecZip $zp
-        if ($r.Backslashes -gt 0 -or $r.SkillMdCount -lt 1) { Write-Host "  BAD: $($s.Name)" -ForegroundColor Red; $bad++ }
+        if ($r.Backslashes -gt 0 -or $r.SkillMdCount -lt 1 -or $r.OverLimit) {
+            Write-Host "  BAD: $($s.Name)  (files=$($r.FileCount) slashes=$($r.Backslashes) skillmd=$($r.SkillMdCount))" -ForegroundColor Red
+            $bad++
+        }
     }
     $z = Get-ChildItem $indiv -Filter *.zip
     Write-Host "==> $($z.Count) ZIPs, $([math]::Round(($z | Measure-Object Length -Sum).Sum/1KB,1)) KB total" -ForegroundColor Cyan
     Write-Host "    spec violations: $bad  (must be 0)" -ForegroundColor DarkGray
-    Write-Host "`nUpload each at claude.ai > Settings > Features > Skills." -ForegroundColor Green
+    Write-Host "`nUpload each at claude.ai > Customize > Skills." -ForegroundColor Green
 }
 
 Write-Host "Output: $((Resolve-Path $OutDir).Path)" -ForegroundColor DarkGray
