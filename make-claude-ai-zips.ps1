@@ -67,12 +67,26 @@ function Test-SpecZip {
     $a = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
     try {
         $backslashes = @($a.Entries | Where-Object { $_.FullName.Contains($SEP) }).Count
-        $hasSkillMd  = @($a.Entries | Where-Object { $_.FullName -match '(^|/)SKILL\.md$' }).Count
+        $skillMds    = @($a.Entries | Where-Object { $_.FullName -match '(^|/)SKILL\.md$' })
+
+        # The uploader wants SKILL.md to *start with* "---". A UTF-8 BOM makes
+        # it start with EF BB BF instead, which reads as valid text everywhere
+        # else and is invisible in an editor -- so check the raw bytes.
+        $startsWithFrontmatter = $false
+        if ($skillMds.Count -eq 1) {
+            $ms = New-Object System.IO.MemoryStream
+            $skillMds[0].Open().CopyTo($ms)
+            $b = $ms.ToArray()
+            $ms.Dispose()
+            $startsWithFrontmatter = ($b.Length -ge 3 -and $b[0] -eq 0x2D -and $b[1] -eq 0x2D -and $b[2] -eq 0x2D)
+        }
+
         [PSCustomObject]@{
-            Backslashes  = $backslashes
-            SkillMdCount = $hasSkillMd
-            FileCount    = $a.Entries.Count
-            OverLimit    = ($a.Entries.Count -gt $MAX_FILES)
+            Backslashes    = $backslashes
+            SkillMdCount   = $skillMds.Count
+            FileCount      = $a.Entries.Count
+            OverLimit      = ($a.Entries.Count -gt $MAX_FILES)
+            FrontmatterOk  = $startsWithFrontmatter
         }
     } finally { $a.Dispose() }
 }
@@ -139,7 +153,12 @@ Read only what the task needs. Do not read all $($skills.Count).
 |---|---|
 $($index -join "`n")
 "@
-    Set-Content -LiteralPath "$staging/SKILL.md" -Value $body -Encoding utf8 -NoNewline
+    # NOT Set-Content -Encoding utf8: PS 5.1 always prepends a UTF-8 BOM with
+    # that, so the file begins EF BB BF 2D 2D 2D and the uploader rejects it
+    # with "SKILL.md must start with YAML frontmatter (---)" -- the --- is
+    # there, just not first. UTF8Encoding($false) writes no BOM.
+    $skillMdPath = Join-Path (Resolve-Path $staging).Path 'SKILL.md'
+    [System.IO.File]::WriteAllText($skillMdPath, $body, (New-Object System.Text.UTF8Encoding $false))
 
     $zipPath = Join-Path $OutDir 'marketing.zip'
     New-SpecZip -SourceDir (Resolve-Path $staging).Path -ZipPath $zipPath -RootName 'marketing'
@@ -147,11 +166,16 @@ $($index -join "`n")
 
     $r = Test-SpecZip $zipPath
     Write-Host "==> marketing.zip  ($([math]::Round((Get-Item $zipPath).Length/1KB,1)) KB, $($skills.Count) skills bundled)" -ForegroundColor Cyan
-    Write-Host "    files: $($r.FileCount) / $MAX_FILES    backslashes: $($r.Backslashes) (must be 0)    SKILL.md: $($r.SkillMdCount) (must be 1)" -ForegroundColor DarkGray
+    Write-Host "    files: $($r.FileCount) / $MAX_FILES    backslashes: $($r.Backslashes) (must be 0)    SKILL.md: $($r.SkillMdCount) (must be 1)    frontmatter: $($r.FrontmatterOk)" -ForegroundColor DarkGray
     # "Zip must contain exactly one SKILL.md file" - nested ones are a hard reject.
     if ($r.SkillMdCount -ne 1) {
         Write-Host "`n!! $($r.SkillMdCount) SKILL.md files - the uploader requires exactly 1. This WILL be rejected." -ForegroundColor Red
         Write-Host "   Bundled skills must use GUIDE.md; only the root index may be SKILL.md." -ForegroundColor Red
+        exit 1
+    }
+    if (-not $r.FrontmatterOk) {
+        Write-Host "`n!! SKILL.md does not start with '---' at byte 0 (likely a UTF-8 BOM)." -ForegroundColor Red
+        Write-Host "   The uploader rejects this as 'must start with YAML frontmatter'." -ForegroundColor Red
         exit 1
     }
     if ($r.OverLimit) {
