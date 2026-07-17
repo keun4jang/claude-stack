@@ -1,0 +1,68 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "rmsdu-stack",
+  "owner": {
+    "name": "rmsdu"
+  },
+  "metadata": {
+    "description": "rmsdu's portable Claude Code stack: memory, workflow framework, UI/UX design, video, and marketing skills",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "my-stack",
+      "source": "./plugins/my-stack",
+      "description": "Installs the whole stack in one command: claude-mem, superpowers, ui-ux-pro-max, marketing-skills, remotion-skills",
+      "category": "meta"
+    },
+    {
+      "name": "claude-mem",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/thedotmack/claude-mem.git",
+        "path": "plugin"
+      },
+      "description": "Persistent memory system for Claude Code - context compression across sessions",
+      "category": "memory"
+    },
+    {
+      "name": "superpowers",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/obra/superpowers.git"
+      },
+      "description": "Core skills library: TDD, debugging, brainstorming, collaboration patterns",
+      "category": "workflow"
+    },
+    {
+      "name": "ui-ux-pro-max",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git"
+      },
+      "description": "UI/UX design intelligence: styles, palettes, font pairings, charts, stack guidelines",
+      "category": "design",
+      "strict": false
+    },
+    {
+      "name": "marketing-skills",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/coreyhaines31/marketingskills.git"
+      },
+      "description": "47 marketing skills by Corey Haines: copywriting, CRO, SEO, ads, email, pricing",
+      "category": "marketing",
+      "strict": false
+    },
+    {
+      "name": "remotion-skills",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/remotion-dev/skills.git"
+      },
+      "description": "Remotion video creation skills: markup, captions, rendering, SaaS, interactivity",
+      "category": "video",
+      "strict": false
+    }
+  ]
+}

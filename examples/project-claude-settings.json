@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy this to <your-repo>/.claude/settings.json and commit it. In Claude Code on the web and the mobile app's Code tab (cloud sessions), these plugins are installed at session start automatically. On a local machine, trusting the folder prompts you to install them instead. User-scope ~/.claude/settings.json does NOT reach cloud sessions - that is why this has to live in the repo.",
+
+  "extraKnownMarketplaces": {
+    "rmsdu-stack": {
+      "source": {
+        "source": "github",
+        "repo": "rmsdu/claude-stack"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "my-stack@rmsdu-stack": true
+  }
+}

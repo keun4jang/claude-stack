@@ -1,0 +1,24 @@
+{
+  "enableWorkflows": true,
+  "skipWorkflowUsageWarning": true,
+  "enabledPlugins": {
+    "claude-mem@thedotmack": true,
+    "superpowers@claude-plugins-official": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
+  },
+  "extraKnownMarketplaces": {
+    "thedotmack": {
+      "source": {
+        "source": "github",
+        "repo": "thedotmack/claude-mem"
+      },
+      "autoUpdate": true
+    },
+    "ui-ux-pro-max-skill": {
+      "source": {
+        "source": "github",
+        "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+      }
+    }
+  }
+}

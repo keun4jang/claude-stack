@@ -1,0 +1,33 @@
+# This repo holds a RECIPE, never state or secrets.
+#
+# Explicit denylist for anything that might get copied in from ~/.claude by
+# accident. An allowlist is safer in principle, but these are the specific
+# files that cause real harm, so name them.
+
+# Live OAuth tokens for the Claude account and every connected MCP server.
+.credentials.json
+.claude.json
+
+# Conversation data.
+history.jsonl
+projects/
+sessions/
+session-env/
+shell-snapshots/
+file-history/
+backups/
+
+# Regenerable caches. plugins/ alone is ~537 MB.
+cache/
+plugins/
+mcp-needs-auth-cache.json
+.last-update-result.json
+.last-cleanup
+
+# Machine-local: contains absolute C:\Users\... paths, SSH key locations,
+# server IPs, and per-project permission grants. Not portable, often sensitive.
+settings.local.json
+
+# The skills CLI's real content. Re-fetched from GitHub by bootstrap; the
+# junctions in ~/.claude/skills point at absolute paths and never travel.
+.agents/
