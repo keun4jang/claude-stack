@@ -95,6 +95,16 @@ if ($Bundled) {
     $index = @()
     foreach ($s in $skills) {
         Copy-Item -LiteralPath $s.FullName -Destination "$staging/skills/$($s.Name)" -Recurse
+
+        # The uploader enforces "exactly one SKILL.md file" across the whole
+        # ZIP, so the 47 bundled skills cannot keep that filename -- 48 of them
+        # is a hard reject. Rename to GUIDE.md and point the index at that.
+        # Only the root index stays SKILL.md.
+        $nested = Join-Path $staging "skills/$($s.Name)/SKILL.md"
+        if (Test-Path -LiteralPath $nested) {
+            Rename-Item -LiteralPath $nested -NewName 'GUIDE.md'
+        }
+
         # -Encoding UTF8 matters: these files have no BOM, and PS 5.1 otherwise
         # reads them as ANSI, turning every em-dash in a description into "??".
         $fm = Get-Content -LiteralPath (Join-Path $s.FullName 'SKILL.md') -Raw -Encoding UTF8
@@ -113,15 +123,15 @@ description: Marketing expertise across 47 areas - copywriting, conversion optim
 
 # Marketing
 
-47 marketing skills. Each lives in ``skills/<name>/SKILL.md``.
+$($skills.Count) marketing skills. Each lives in ``skills/<name>/GUIDE.md``.
 
 ## How to use this
 
 1. Find the row below matching the request.
-2. Read ``skills/<name>/SKILL.md`` and follow it.
+2. Read ``skills/<name>/GUIDE.md`` and follow it as if it were your instructions.
 3. That file may point to more files under its own ``references/`` - read those as needed.
 
-Read only what the task needs. Do not read all 47.
+Read only what the task needs. Do not read all $($skills.Count).
 
 ## Index
 
@@ -137,7 +147,13 @@ $($index -join "`n")
 
     $r = Test-SpecZip $zipPath
     Write-Host "==> marketing.zip  ($([math]::Round((Get-Item $zipPath).Length/1KB,1)) KB, $($skills.Count) skills bundled)" -ForegroundColor Cyan
-    Write-Host "    files: $($r.FileCount) / $MAX_FILES    backslashes: $($r.Backslashes) (must be 0)    SKILL.md: $($r.SkillMdCount)" -ForegroundColor DarkGray
+    Write-Host "    files: $($r.FileCount) / $MAX_FILES    backslashes: $($r.Backslashes) (must be 0)    SKILL.md: $($r.SkillMdCount) (must be 1)" -ForegroundColor DarkGray
+    # "Zip must contain exactly one SKILL.md file" - nested ones are a hard reject.
+    if ($r.SkillMdCount -ne 1) {
+        Write-Host "`n!! $($r.SkillMdCount) SKILL.md files - the uploader requires exactly 1. This WILL be rejected." -ForegroundColor Red
+        Write-Host "   Bundled skills must use GUIDE.md; only the root index may be SKILL.md." -ForegroundColor Red
+        exit 1
+    }
     if ($r.OverLimit) {
         Write-Host "`n!! $($r.FileCount) files exceeds the $MAX_FILES-file upload cap - this WILL be rejected." -ForegroundColor Red
         Write-Host "   Upstream must have added skills or reference files. Either drop some skills" -ForegroundColor Red
