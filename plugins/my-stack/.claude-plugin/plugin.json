@@ -1,0 +1,21 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "my-stack",
+  "description": "rmsdu's full Claude Code stack in one install",
+  "version": "1.0.0",
+  "author": {
+    "name": "rmsdu"
+  },
+  "keywords": [
+    "bundle",
+    "meta",
+    "stack"
+  ],
+  "dependencies": [
+    "claude-mem",
+    "superpowers",
+    "ui-ux-pro-max",
+    "marketing-skills",
+    "remotion-skills"
+  ]
+}
